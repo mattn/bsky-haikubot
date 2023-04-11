@@ -3,7 +3,7 @@
 ## Usage
 
 ```
-$ export HAIKUBOT_PASSWORD=haiku.bsky.social
+$ export HAIKUBOT_PASSWORD=xxxxxxxxxxx
 $ ./bsky-haikubot
 ```
 
