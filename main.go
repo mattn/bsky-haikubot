@@ -231,8 +231,19 @@ func run() error {
 		}
 	}()
 
+	tm := time.NewTimer(10 * time.Minute)
+	defer tm.Stop()
+
+	go func() {
+		<-tm.C
+		log.Println("restart")
+		con.Close()
+	}()
+
 	enc := json.NewEncoder(os.Stdout)
 	events.ConsumeRepoStreamLite(context.Background(), con, func(op repomgr.EventKind, seq int64, path string, did string, rcid *cid.Cid, rec any) error {
+		tm.Reset(10 * time.Minute)
+
 		if op != "create" {
 			return nil
 		}
@@ -282,7 +293,10 @@ func main() {
 		os.Exit(check(strings.Join(flag.Args(), " ")))
 	}
 
-	if err := run(); err != nil {
-		log.Fatal(err)
+	for {
+		log.Println("start")
+		if err := run(); err != nil {
+			log.Println(err)
+		}
 	}
 }
