@@ -232,11 +232,12 @@ func run() error {
 	}()
 
 	tm := time.NewTimer(10 * time.Minute)
-	defer tm.Stop()
 
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		<-tm.C
-		log.Println("restart")
+		log.Println("timeout")
 		con.Close()
 	}()
 
@@ -259,6 +260,8 @@ func run() error {
 		q <- Event{schema: parts[0], did: did, rkey: parts[1], text: post.Text}
 		return nil
 	})
+	close(q)
+	tm.Stop()
 	wg.Wait()
 
 	return nil
