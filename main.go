@@ -169,7 +169,7 @@ func (bot *Bot) makeXRPCC() (*xrpc.Client, error) {
 		Auth:   &xrpc.AuthInfo{Handle: bot.Handle},
 	}
 	auth, err := comatproto.ServerCreateSession(context.TODO(), xrpcc, &comatproto.ServerCreateSession_Input{
-		Identifier: &xrpcc.Auth.Handle,
+		Identifier: xrpcc.Auth.Handle,
 		Password:   bot.Password,
 	})
 	if err != nil {
