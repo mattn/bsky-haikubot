@@ -220,7 +220,6 @@ func run() error {
 	defer con.Close()
 
 	q := make(chan Event, 100)
-	defer close(q)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
