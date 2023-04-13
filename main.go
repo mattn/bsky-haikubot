@@ -113,7 +113,8 @@ func (bot *Bot) post(collection string, did string, rkey string, text string) er
 		CreatedAt: time.Now().Local().Format(time.RFC3339),
 		Embed: &bsky.FeedPost_Embed{
 			EmbedRecord: &bsky.EmbedRecord{
-				Record: &comatproto.RepoStrongRef{Cid: *getResp.Cid, Uri: getResp.Uri},
+				LexiconTypeID: "app.bsky.embed.record",
+				Record:        &comatproto.RepoStrongRef{Cid: *getResp.Cid, Uri: getResp.Uri},
 			},
 		},
 	}
@@ -131,7 +132,9 @@ func (bot *Bot) post(collection string, did string, rkey string, text string) er
 			fmt.Println(resp.Uri)
 			return nil
 		}
+		log.Printf("failed to create post: %v", err)
 		lastErr = err
+		time.Sleep(time.Second)
 	}
 
 	return fmt.Errorf("failed to create post: %w", lastErr)
