@@ -118,19 +118,23 @@ func (bot *Bot) post(collection string, did string, rkey string, text string) er
 		},
 	}
 
-	resp, err := comatproto.RepoCreateRecord(context.TODO(), bot.xrpcc, &comatproto.RepoCreateRecord_Input{
-		Collection: "app.bsky.feed.post",
-		Repo:       bot.xrpcc.Auth.Did,
-		Record: &lexutil.LexiconTypeDecoder{
-			Val: post,
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create post: %w", err)
+	var lastErr error
+	for retry := 0; retry < 3; retry++ {
+		resp, err := comatproto.RepoCreateRecord(context.TODO(), bot.xrpcc, &comatproto.RepoCreateRecord_Input{
+			Collection: "app.bsky.feed.post",
+			Repo:       bot.xrpcc.Auth.Did,
+			Record: &lexutil.LexiconTypeDecoder{
+				Val: post,
+			},
+		})
+		if err == nil {
+			fmt.Println(resp.Uri)
+			return nil
+		}
+		lastErr = err
 	}
-	fmt.Println(resp.Uri)
 
-	return nil
+	return fmt.Errorf("failed to create post: %w", lastErr)
 }
 
 func (bot *Bot) analyze(ev Event) error {
@@ -226,7 +230,9 @@ func run() error {
 	go func() {
 		defer wg.Done()
 		for ev := range q {
-			bot.analyze(ev)
+			if err := bot.analyze(ev); err != nil {
+				log.Println(err)
+			}
 		}
 	}()
 
