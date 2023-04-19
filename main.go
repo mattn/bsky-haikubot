@@ -109,8 +109,9 @@ func (bot *Bot) post(collection string, did string, rkey string, text string) er
 	}
 
 	post := &bsky.FeedPost{
-		Text:      text,
-		CreatedAt: time.Now().Local().Format(time.RFC3339),
+		LexiconTypeID: "app.bsky.feed.post",
+		Text:          text,
+		CreatedAt:     time.Now().Local().Format(time.RFC3339),
 		Embed: &bsky.FeedPost_Embed{
 			EmbedRecord: &bsky.EmbedRecord{
 				LexiconTypeID: "app.bsky.embed.record",
@@ -232,27 +233,32 @@ func run() error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for ev := range q {
-			if err := bot.analyze(ev); err != nil {
-				log.Println(err)
+		retry := 0
+	events_loop:
+		for {
+			select {
+			case ev, ok := <-q:
+				if !ok {
+					break events_loop
+				}
+				if err := bot.analyze(ev); err != nil {
+					log.Println(err)
+				}
+				retry = 0
+			case <-time.After(10 * time.Second):
+				retry++
+				log.Println("Health check", retry)
+				if retry > 60 {
+					log.Println("timeout")
+					con.Close()
+					break events_loop
+				}
 			}
 		}
 	}()
 
-	tm := time.NewTimer(10 * time.Minute)
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		<-tm.C
-		log.Println("timeout")
-		con.Close()
-	}()
-
 	enc := json.NewEncoder(os.Stdout)
 	events.ConsumeRepoStreamLite(context.Background(), con, func(op repomgr.EventKind, seq int64, path string, did string, rcid *cid.Cid, rec any) error {
-		tm.Reset(10 * time.Minute)
-
 		if op != "create" {
 			return nil
 		}
@@ -269,7 +275,6 @@ func run() error {
 		return nil
 	})
 	close(q)
-	tm.Stop()
 	wg.Wait()
 
 	return nil
