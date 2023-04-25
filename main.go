@@ -39,8 +39,9 @@ var revision = "HEAD"
 var (
 	unidic = uni.Dict()
 
-	reLink = regexp.MustCompile(`\b\w+://\S+\b`)
-	reTag  = regexp.MustCompile(`\B#\S+`)
+	reLink     = regexp.MustCompile(`\b\w+://\S+\b`)
+	reTag      = regexp.MustCompile(`\B#\S+`)
+	reJapanese = regexp.MustCompile(`[０-９Ａ-Ｚａ-ｚぁ-ゖァ-ヾ一-鶴]`)
 
 	//go:embed dict.json
 	worddata []byte
@@ -147,7 +148,7 @@ func (bot *Bot) post(collection string, did string, rkey string, text string) er
 }
 
 func (bot *Bot) analyze(ev Event) error {
-	if strings.Contains(ev.text, "#n575") {
+	if strings.Contains(ev.text, "#n575") || !reJapanese.MatchString(ev.text) {
 		return nil
 	}
 	content := normalize(ev.text)
