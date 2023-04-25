@@ -103,7 +103,12 @@ func (bot *Bot) post(collection string, did string, rkey string, text string) er
 		return nil
 	}
 
-	getResp, err := comatproto.RepoGetRecord(context.TODO(), bot.xrpcc, "", collection, did, rkey)
+	xrpcc, err := bot.makeXRPCC()
+	if err != nil {
+		return fmt.Errorf("cannot create client: %w", err)
+	}
+
+	getResp, err := comatproto.RepoGetRecord(context.TODO(), xrpcc, "", collection, did, rkey)
 	if err != nil {
 		return fmt.Errorf("cannot get record: %w", err)
 	}
@@ -122,9 +127,9 @@ func (bot *Bot) post(collection string, did string, rkey string, text string) er
 
 	var lastErr error
 	for retry := 0; retry < 3; retry++ {
-		resp, err := comatproto.RepoCreateRecord(context.TODO(), bot.xrpcc, &comatproto.RepoCreateRecord_Input{
+		resp, err := comatproto.RepoCreateRecord(context.TODO(), xrpcc, &comatproto.RepoCreateRecord_Input{
 			Collection: "app.bsky.feed.post",
-			Repo:       bot.xrpcc.Auth.Did,
+			Repo:       xrpcc.Auth.Did,
 			Record: &lexutil.LexiconTypeDecoder{
 				Val: post,
 			},
@@ -167,7 +172,6 @@ type Bot struct {
 	Host     string
 	Handle   string
 	Password string
-	xrpcc    *xrpc.Client
 }
 
 func (bot *Bot) makeXRPCC() (*xrpc.Client, error) {
@@ -213,12 +217,6 @@ func run() error {
 
 	if bot.Password == "" {
 		log.Fatal("HAIKUBOT_PASSWORD is required")
-	}
-
-	var err error
-	bot.xrpcc, err = bot.makeXRPCC()
-	if err != nil {
-		return fmt.Errorf("cannot create client: %w", err)
 	}
 
 	con, _, err := websocket.DefaultDialer.Dial(bot.wssUrl(), http.Header{})
