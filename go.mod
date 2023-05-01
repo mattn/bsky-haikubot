@@ -7,7 +7,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/ikawaha/kagome-dict-ipa-neologd v0.3.2
 	github.com/ipfs/go-cid v0.4.1
-	github.com/mattn/go-haiku v0.0.30
+	github.com/mattn/go-haiku v0.0.31
 )
 
 require (
@@ -97,4 +97,3 @@ require (
 	gorm.io/gorm v1.25.0 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
-
