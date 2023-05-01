@@ -45,6 +45,8 @@ var (
 	reTag      = regexp.MustCompile(`\B#\S+`)
 	reJapanese = regexp.MustCompile(`[０-９Ａ-Ｚａ-ｚぁ-ゖァ-ヾ一-鶴]`)
 
+	debug = false
+
 	//go:embed dict.json
 	worddata []byte
 
@@ -91,14 +93,14 @@ func isHaiku(s string) bool {
 	for k, v := range words {
 		s = k.ReplaceAllString(s, v)
 	}
-	return haiku.MatchWithOpt(s, []int{5, 7, 5}, &haiku.Opt{Udic: kagomeDic})
+	return haiku.MatchWithOpt(s, []int{5, 7, 5}, &haiku.Opt{Udic: kagomeDic, Debug: debug})
 }
 
 func isTanka(s string) bool {
 	for k, v := range words {
 		s = k.ReplaceAllString(s, v)
 	}
-	return haiku.MatchWithOpt(s, []int{5, 7, 5, 7, 7}, &haiku.Opt{Udic: kagomeDic})
+	return haiku.MatchWithOpt(s, []int{5, 7, 5, 7, 7}, &haiku.Opt{Udic: kagomeDic, Debug: debug})
 }
 
 func (bot *Bot) post(collection string, did string, rkey string, text string) error {
@@ -297,6 +299,7 @@ func check(s string) int {
 func main() {
 	var ver bool
 	var tt bool
+	flag.BoolVar(&debug, "V", false, "verbose")
 	flag.BoolVar(&ver, "v", false, "show version")
 	flag.BoolVar(&tt, "t", false, "test")
 	flag.Parse()

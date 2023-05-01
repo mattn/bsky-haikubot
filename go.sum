@@ -316,6 +316,8 @@ github.com/mattn/go-haiku v0.0.28 h1:mKKC5h1NG8uSMGwW66PTdaFuEPmYurPQ4j0dzqYe85Q
 github.com/mattn/go-haiku v0.0.28/go.mod h1:moWyj2EXTKXE1zaOeQrIbRpv/4+je3PSJvjd06aTGbQ=
 github.com/mattn/go-haiku v0.0.29 h1:WBsPEx5z6LFuGnHhqdh1JeJjpityMY6BpOVHfPIFSAM=
 github.com/mattn/go-haiku v0.0.29/go.mod h1:moWyj2EXTKXE1zaOeQrIbRpv/4+je3PSJvjd06aTGbQ=
+github.com/mattn/go-haiku v0.0.30 h1:iEatOsv9KN6ycOsQCQ182yWduEdfimwRh7k80IENZAA=
+github.com/mattn/go-haiku v0.0.30/go.mod h1:moWyj2EXTKXE1zaOeQrIbRpv/4+je3PSJvjd06aTGbQ=
 github.com/mattn/go-isatty v0.0.5/go.mod h1:Iq45c/XA43vh69/j3iqttzPXn0bhXyGjM0Hdxcsrc5s=
 github.com/mattn/go-isatty v0.0.8/go.mod h1:Iq45c/XA43vh69/j3iqttzPXn0bhXyGjM0Hdxcsrc5s=
 github.com/mattn/go-isatty v0.0.14/go.mod h1:7GGIvUiUoEMVVmxf/4nioHXj79iQHKdU27kJ6hsGG94=
