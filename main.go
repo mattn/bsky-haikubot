@@ -15,7 +15,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ikawaha/kagome-dict/uni"
+	//"github.com/ikawaha/kagome-dict/uni"
+	//"github.com/ikawaha/kagome-dict/ipa"
+	"github.com/ikawaha/kagome-dict-ipa-neologd"
 	"github.com/mattn/go-haiku"
 
 	comatproto "github.com/bluesky-social/indigo/api/atproto"
@@ -37,7 +39,7 @@ const version = "0.0.5"
 var revision = "HEAD"
 
 var (
-	unidic = uni.Dict()
+	kagomeDic = ipaneologd.Dict()
 
 	reLink     = regexp.MustCompile(`\b\w+://\S+\b`)
 	reTag      = regexp.MustCompile(`\B#\S+`)
@@ -89,14 +91,14 @@ func isHaiku(s string) bool {
 	for k, v := range words {
 		s = k.ReplaceAllString(s, v)
 	}
-	return haiku.MatchWithOpt(s, []int{5, 7, 5}, &haiku.Opt{Udic: unidic})
+	return haiku.MatchWithOpt(s, []int{5, 7, 5}, &haiku.Opt{Udic: kagomeDic})
 }
 
 func isTanka(s string) bool {
 	for k, v := range words {
 		s = k.ReplaceAllString(s, v)
 	}
-	return haiku.MatchWithOpt(s, []int{5, 7, 5, 7, 7}, &haiku.Opt{Udic: unidic})
+	return haiku.MatchWithOpt(s, []int{5, 7, 5, 7, 7}, &haiku.Opt{Udic: kagomeDic})
 }
 
 func (bot *Bot) post(collection string, did string, rkey string, text string) error {

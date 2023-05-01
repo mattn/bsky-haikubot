@@ -5,9 +5,9 @@ go 1.20
 require (
 	github.com/bluesky-social/indigo v0.0.0-20230418225919-0ea3242f9f46
 	github.com/gorilla/websocket v1.5.0
-	github.com/ikawaha/kagome-dict/uni v1.1.9
+	github.com/ikawaha/kagome-dict-ipa-neologd v0.3.2
 	github.com/ipfs/go-cid v0.4.1
-	github.com/mattn/go-haiku v0.0.25
+	github.com/mattn/go-haiku v0.0.29
 )
 
 require (
@@ -22,6 +22,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/ikawaha/kagome-dict v1.0.9 // indirect
+	github.com/ikawaha/kagome-dict/uni v1.1.9 // indirect
 	github.com/ikawaha/kagome/v2 v2.9.2 // indirect
 	github.com/ipfs/bbloom v0.0.4 // indirect
 	github.com/ipfs/go-block-format v0.1.2 // indirect
