@@ -257,21 +257,6 @@ func run() error {
 					con.Close()
 					break events_loop
 				}
-			}
-		}
-	}()
-
-	gcTimer := time.NewTicker(time.Minute)
-	defer gcTimer.Stop()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case _, ok := <-gcTimer.C:
-				if !ok {
-					return
-				}
 				runtime.GC()
 			}
 		}
