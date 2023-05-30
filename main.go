@@ -263,7 +263,7 @@ func run() error {
 	}()
 
 	enc := json.NewEncoder(os.Stdout)
-	events.ConsumeRepoStreamLite(context.Background(), con, func(op repomgr.EventKind, seq int64, path string, did string, rcid *cid.Cid, rec any) error {
+	events.ConsumeRepoStreamLite2(context.Background(), con, func(op repomgr.EventKind, seq int64, path string, did string, rcid *cid.Cid, rec any) error {
 		if op != "create" {
 			return nil
 		}
