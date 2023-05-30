@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -26,9 +27,9 @@ import (
 	cliutil "github.com/bluesky-social/indigo/cmd/gosky/util"
 	"github.com/bluesky-social/indigo/events"
 	lexutil "github.com/bluesky-social/indigo/lex/util"
+	"github.com/bluesky-social/indigo/repo"
 	"github.com/bluesky-social/indigo/repomgr"
 	"github.com/bluesky-social/indigo/xrpc"
-	cid "github.com/ipfs/go-cid"
 
 	"github.com/gorilla/websocket"
 )
@@ -263,22 +264,63 @@ func run() error {
 	}()
 
 	enc := json.NewEncoder(os.Stdout)
-	events.ConsumeRepoStreamLite2(context.Background(), con, func(op repomgr.EventKind, seq int64, path string, did string, rcid *cid.Cid, rec any) error {
-		if op != "create" {
+
+	ctx := context.Background()
+	rsc := &events.RepoStreamCallbacks{
+		RepoCommit: func(evt *comatproto.SyncSubscribeRepos_Commit) error {
+			if evt.TooBig {
+				log.Printf("skipping too big events for now: %d", evt.Seq)
+				return nil
+			}
+			r, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))
+			if err != nil {
+				return fmt.Errorf("reading repo from car (seq: %d, len: %d): %w", evt.Seq, len(evt.Blocks), err)
+			}
+
+			for _, op := range evt.Ops {
+				ek := repomgr.EventKind(op.Action)
+				switch ek {
+				case repomgr.EvtKindCreateRecord, repomgr.EvtKindUpdateRecord:
+					rc, rec, err := r.GetRecord(ctx, op.Path)
+					if err != nil {
+						e := fmt.Errorf("getting record %s (%s) within seq %d for %s: %w", op.Path, *op.Cid, evt.Seq, evt.Repo, err)
+						log.Print(e)
+						continue
+					}
+
+					if lexutil.LexLink(rc) != *op.Cid {
+						return fmt.Errorf("mismatch in record and op cid: %s != %s", rc, *op.Cid)
+					}
+
+					if ek != "create" {
+						return nil
+					}
+					post, ok := rec.(*bsky.FeedPost)
+					if !ok {
+						return nil
+					}
+					parts := strings.Split(op.Path, "/")
+					if len(parts) < 2 {
+						return nil
+					}
+					enc.Encode(post)
+
+					q <- Event{schema: parts[0], did: evt.Repo, rkey: parts[1], text: post.Text}
+				}
+			}
 			return nil
-		}
-		post, ok := rec.(*bsky.FeedPost)
-		if !ok {
+		},
+		RepoInfo: func(info *comatproto.SyncSubscribeRepos_Info) error {
 			return nil
-		}
-		parts := strings.Split(path, "/")
-		if len(parts) < 2 {
-			return nil
-		}
-		enc.Encode(post)
-		q <- Event{schema: parts[0], did: did, rkey: parts[1], text: post.Text}
-		return nil
-	})
+		},
+		Error: func(errf *events.ErrorFrame) error {
+			return fmt.Errorf("error frame: %s: %s", errf.Error, errf.Message)
+		},
+	}
+	err = events.HandleRepoStream(ctx, con, &events.SequentialScheduler{Do: rsc.EventHandler})
+	if err != nil {
+		log.Println(err)
+	}
 	close(q)
 	wg.Wait()
 
