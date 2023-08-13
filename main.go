@@ -153,8 +153,23 @@ func (bot *Bot) post(collection string, did string, rkey string, text string) er
 	return fmt.Errorf("failed to create post: %w", lastErr)
 }
 
+func blocklisted(ev Event) bool {
+	var blocklist = []string{
+		"did:plc:7n2uogskixiouu4ofz3o4vdf",
+	}
+	for _, block := range blocklist {
+		if ev.did == block {
+			return true
+		}
+	}
+	return false
+}
+
 func (bot *Bot) analyze(ev Event) error {
 	if strings.Contains(ev.text, "#n575") || !reJapanese.MatchString(ev.text) {
+		return nil
+	}
+	if blocklisted(ev) {
 		return nil
 	}
 	content := normalize(ev.text)
