@@ -156,6 +156,7 @@ func (bot *Bot) post(collection string, did string, rkey string, text string) er
 func blocklisted(ev Event) bool {
 	var blocklist = []string{
 		"did:plc:7n2uogskixiouu4ofz3o4vdf",
+		"did:plc:dxx5meybbce2bhqxxviivwhm",
 	}
 	for _, block := range blocklist {
 		if ev.did == block {
