@@ -170,6 +170,7 @@ func (bot *Bot) analyze(ev Event) error {
 		return nil
 	}
 	if blocklisted(ev) {
+		log.Println("BLOCKED ", ev.did)
 		return nil
 	}
 	content := normalize(ev.text)
