@@ -154,13 +154,13 @@ func (bot *Bot) post(collection string, did string, rkey string, text string) er
 	return fmt.Errorf("failed to create post: %w", lastErr)
 }
 
-func blocklisted(ev Event) bool {
+func blocklisted(did string) bool {
 	var blocklist = []string{
 		"did:plc:7n2uogskixiouu4ofz3o4vdf",
 		"did:plc:dxx5meybbce2bhqxxviivwhm",
 	}
 	for _, block := range blocklist {
-		if ev.did == block {
+		if did == block {
 			return true
 		}
 	}
@@ -168,13 +168,6 @@ func blocklisted(ev Event) bool {
 }
 
 func (bot *Bot) analyze(ev Event) error {
-	if strings.Contains(ev.text, "#n575") || !reJapanese.MatchString(ev.text) {
-		return nil
-	}
-	if blocklisted(ev) {
-		log.Println("BLOCKED ", ev.did)
-		return nil
-	}
 	content := normalize(ev.text)
 	if isHaiku(content) {
 		log.Println("MATCHED HAIKU!", content)
@@ -315,6 +308,25 @@ func run() error {
 					}
 					post, ok := rec.(*bsky.FeedPost)
 					if !ok {
+						return nil
+					}
+					if len(post.Langs) > 0 {
+						hasJa := false
+						for _, lang := range post.Langs {
+							if lang == "ja" {
+								hasJa = true
+								break
+							}
+						}
+						if !hasJa {
+							return nil
+						}
+					}
+					if strings.Contains(post.Text, "#n575") || !reJapanese.MatchString(post.Text) {
+						return nil
+					}
+					if blocklisted(evt.Repo) {
+						log.Println("BLOCKED ", evt.Repo)
 						return nil
 					}
 					parts := strings.Split(op.Path, "/")
