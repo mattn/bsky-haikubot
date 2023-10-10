@@ -227,7 +227,7 @@ func (bot *Bot) wssUrl() string {
 	return "wss://" + u.Host + "/xrpc/com.atproto.sync.subscribeRepos"
 }
 
-func healthPush(url string) {
+func heartbeatPush(url string) {
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Println(err.Error())
@@ -253,8 +253,8 @@ func run() error {
 
 	q := make(chan Event, 100)
 
-	hctimer := time.NewTicker(5 * time.Minute)
-	defer hctimer.Stop()
+	hbtimer := time.NewTicker(5 * time.Minute)
+	defer hbtimer.Stop()
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -272,9 +272,9 @@ func run() error {
 					log.Println(err)
 				}
 				retry = 0
-			case <-hctimer.C:
-				if url := os.Getenv("HEALTHCHECK_URL"); url != "" {
-					go healthPush(url)
+			case <-hbtimer.C:
+				if url := os.Getenv("HEARTBEAT_URL"); url != "" {
+					go heartbeatPush(url)
 				}
 			case <-time.After(10 * time.Second):
 				retry++
