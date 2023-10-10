@@ -227,6 +227,14 @@ func (bot *Bot) wssUrl() string {
 	return "wss://" + u.Host + "/xrpc/com.atproto.sync.subscribeRepos"
 }
 
+func healthPush(url string) {
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	defer resp.Body.Close()
+}
+
 func run() error {
 	var bot Bot
 	bot.Host = getenv("HAIKUBOT_HOST", "https://bsky.social")
@@ -245,6 +253,9 @@ func run() error {
 
 	q := make(chan Event, 100)
 
+	hctimer := time.NewTicker(5 * time.Minute)
+	defer hctimer.Stop()
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -261,6 +272,10 @@ func run() error {
 					log.Println(err)
 				}
 				retry = 0
+			case <-hctimer.C:
+				if url := os.Getenv("HEALTHCHECK_URL"); url != "" {
+					go healthPush(url)
+				}
 			case <-time.After(10 * time.Second):
 				retry++
 				log.Println("Health check", retry)
