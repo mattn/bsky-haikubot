@@ -158,6 +158,7 @@ func blocklisted(did string) bool {
 	var blocklist = []string{
 		"did:plc:7n2uogskixiouu4ofz3o4vdf",
 		"did:plc:dxx5meybbce2bhqxxviivwhm",
+		"did:plc:bb5yxpnjg3ev7zuh7sdg43s6",
 	}
 	for _, block := range blocklist {
 		if did == block {
