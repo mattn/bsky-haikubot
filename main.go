@@ -188,6 +188,7 @@ func (bot *Bot) analyze(ev Event) error {
 }
 
 type Bot struct {
+	Bgs      string
 	Host     string
 	Handle   string
 	Password string
@@ -221,7 +222,7 @@ func getenv(name, def string) string {
 }
 
 func (bot *Bot) wssUrl() string {
-	u, err := url.Parse(bot.Host)
+	u, err := url.Parse(bot.Bgs)
 	if err != nil {
 		log.Fatal("invalid host", bot.Host)
 	}
@@ -238,6 +239,7 @@ func heartbeatPush(url string) {
 
 func run() error {
 	var bot Bot
+	bot.Bgs = getenv("HAIKUBOT_BGS", "https://bsky.network")
 	bot.Host = getenv("HAIKUBOT_HOST", "https://bsky.social")
 	bot.Handle = getenv("HAIKUBOT_HANDLE", "haiku.bsky.social")
 	bot.Password = os.Getenv("HAIKUBOT_PASSWORD")
