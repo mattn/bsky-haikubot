@@ -9,7 +9,7 @@ require (
 	github.com/gorilla/websocket v1.5.1
 	github.com/ikawaha/kagome-dict v1.0.9
 	github.com/ikawaha/kagome-dict-ipa-neologd v0.3.2
-	github.com/mattn/go-haiku v0.0.40
+	github.com/mattn/go-haiku v0.0.41
 )
 
 require (
@@ -29,7 +29,6 @@ require (
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hashicorp/golang-lru/arc/v2 v2.0.7 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
-	github.com/ikawaha/kagome-dict/uni v1.1.9 // indirect
 	github.com/ikawaha/kagome/v2 v2.9.4 // indirect
 	github.com/ipfs/bbloom v0.0.4 // indirect
 	github.com/ipfs/go-block-format v0.2.0 // indirect

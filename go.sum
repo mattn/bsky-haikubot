@@ -220,8 +220,8 @@ github.com/libp2p/go-netroute v0.2.1 h1:V8kVrpD8GK0Riv15/7VN6RbUQ3URNZVosw7H2v9t
 github.com/libp2p/go-netroute v0.2.1/go.mod h1:hraioZr0fhBjG0ZRXJJ6Zj2IVEVNx6tDTFQfSmcq7mQ=
 github.com/mattn/go-colorable v0.1.13 h1:fFA4WZxdEF4tXPZVKMLwD8oUnCTTo08duU7wxecdEvA=
 github.com/mattn/go-colorable v0.1.13/go.mod h1:7S9/ev0klgBDR4GtXTXX8a3vIGJpMovkB8vQcUbaXHg=
-github.com/mattn/go-haiku v0.0.40 h1:tCCtMqG/e0/gRPZgev+UgSL7O+cu18Cd8yuOqIiqCpk=
-github.com/mattn/go-haiku v0.0.40/go.mod h1:1dRTtM8aphAGx6qIgoVbYVQGITpZEeG8Ii1GizAHhxo=
+github.com/mattn/go-haiku v0.0.41 h1:9xk5xrKdEtycUtmi3EsLX7FKxzCl+IEin4i+JVcbHec=
+github.com/mattn/go-haiku v0.0.41/go.mod h1:1dRTtM8aphAGx6qIgoVbYVQGITpZEeG8Ii1GizAHhxo=
 github.com/mattn/go-isatty v0.0.14/go.mod h1:7GGIvUiUoEMVVmxf/4nioHXj79iQHKdU27kJ6hsGG94=
 github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
