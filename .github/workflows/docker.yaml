@@ -42,7 +42,7 @@ jobs:
         push: ${{ github.event_name != 'pull_request' }}
         tags: |
           ghcr.io/${{ github.repository }}:latest
-          ghcr.io/${{ github.repository }}:${{ steps.meta.outputs.tags }}
+          ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max # mode=maxを有効にすると、中間ステージまで含めてキャッシュできる
