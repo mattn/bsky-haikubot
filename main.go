@@ -57,6 +57,10 @@ var (
 	dicdata []byte
 
 	userDic *dict.UserDict
+
+	followers []string
+
+	mu sync.Mutex
 )
 
 type Event struct {
@@ -161,6 +165,9 @@ func blocklisted(did string) bool {
 }
 
 func (bot *Bot) analyze(ev Event) error {
+	if !bot.hasRelation(ev.did) {
+		return nil
+	}
 	content := normalize(ev.text)
 	if isHaiku(content) {
 		log.Println("MATCHED HAIKU!", content)
@@ -203,6 +210,47 @@ func (bot *Bot) makeXRPCC() (*xrpc.Client, error) {
 	xrpcc.Auth.AccessJwt = auth.AccessJwt
 	xrpcc.Auth.RefreshJwt = auth.RefreshJwt
 	return xrpcc, nil
+}
+
+func (bot *Bot) updateFollowers() {
+	xrpcc, err := bot.makeXRPCC()
+	if err != nil {
+		log.Printf("cannot create client: %v", err)
+	}
+
+	var cursor string
+	var ffs []string
+	for {
+		fws, err := bsky.GraphGetFollowers(context.TODO(), xrpcc, xrpcc.Auth.Handle, cursor, 100)
+		if err != nil {
+			log.Printf("getting record: %v", err)
+			return
+		}
+
+		for _, f := range fws.Followers {
+			ffs = append(ffs, f.Did)
+		}
+		if fws.Cursor == nil {
+			break
+		}
+		cursor = *fws.Cursor
+	}
+
+	mu.Lock()
+	followers = ffs
+	mu.Unlock()
+}
+
+func (bot *Bot) hasRelation(did string) bool {
+	mu.Lock()
+	defer mu.Unlock()
+
+	for _, f := range followers {
+		if f == did {
+			return true
+		}
+	}
+	return false
 }
 
 func getenv(name, def string) string {
@@ -251,6 +299,9 @@ func run() error {
 	hbtimer := time.NewTicker(5 * time.Minute)
 	defer hbtimer.Stop()
 
+	uftimer := time.NewTicker(5 * time.Minute)
+	defer uftimer.Stop()
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -271,6 +322,8 @@ func run() error {
 				if url := os.Getenv("HEARTBEAT_URL"); url != "" {
 					go heartbeatPush(url)
 				}
+			case <-uftimer.C:
+				go bot.updateFollowers()
 			case <-time.After(10 * time.Second):
 				retry++
 				log.Println("Health check", retry)
