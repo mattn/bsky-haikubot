@@ -288,6 +288,8 @@ func run() error {
 		log.Fatal("HAIKUBOT_PASSWORD is required")
 	}
 
+	go bot.updateFollowers()
+
 	con, _, err := websocket.DefaultDialer.Dial(bot.wssUrl(), http.Header{})
 	if err != nil {
 		return fmt.Errorf("dial failure: %w", err)
