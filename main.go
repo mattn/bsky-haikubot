@@ -44,9 +44,10 @@ const version = "0.0.43"
 var revision = "HEAD"
 
 var (
-	reLink     = regexp.MustCompile(`^\w+://\S+$`)
-	reTag      = regexp.MustCompile(`^#\S+$`)
-	reJapanese = regexp.MustCompile(`[０-９Ａ-Ｚａ-ｚぁ-ゖァ-ヾ一-鶴]`)
+	reLink          = regexp.MustCompile(`^\w+://\S+$`)
+	reTag           = regexp.MustCompile(`^#\S+$`)
+	reJapanese      = regexp.MustCompile(`[０-９Ａ-Ｚａ-ｚぁ-ゖァ-ヾ一-鶴]`)
+	reHiragKataOnly = regexp.MustCompile(`^([ぁ-ゖー]+|[ァ-ヾー]+)$`)
 
 	debug = false
 
@@ -332,6 +333,9 @@ func run() error {
 						}
 					}
 					if strings.Contains(post.Text, "#n575") || !reJapanese.MatchString(post.Text) {
+						return nil
+					}
+					if reHiragKataOnly.MatchString(post.Text) {
 						return nil
 					}
 					if blocklisted(evt.Repo) {
