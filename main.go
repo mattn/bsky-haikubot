@@ -39,7 +39,7 @@ import (
 
 const name = "bsky-haikubot"
 
-const version = "0.0.46"
+const version = "0.0.47"
 
 var revision = "HEAD"
 
