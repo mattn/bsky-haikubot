@@ -213,6 +213,13 @@ func (bot *Bot) makeXRPCC() (*xrpc.Client, error) {
 }
 
 func (bot *Bot) updateFollowers() {
+	defer func() {
+		err := recover()
+		if err != nil {
+			log.Printf("recover: %v", err)
+		}
+	}()
+
 	xrpcc, err := bot.makeXRPCC()
 	if err != nil {
 		log.Printf("cannot create client: %v", err)
