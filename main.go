@@ -223,6 +223,7 @@ func (bot *Bot) updateFollowers() {
 	xrpcc, err := bot.makeXRPCC()
 	if err != nil {
 		log.Printf("cannot create client: %v", err)
+		return
 	}
 
 	var cursor string
