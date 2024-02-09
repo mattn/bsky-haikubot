@@ -127,6 +127,7 @@ func (bot *Bot) post(collection string, did string, rkey string, text string) er
 				Record:        &comatproto.RepoStrongRef{Cid: *getResp.Cid, Uri: getResp.Uri},
 			},
 		},
+		Langs: []string{"ja"},
 	}
 
 	var lastErr error
