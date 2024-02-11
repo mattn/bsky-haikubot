@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.0
 
 require (
-	github.com/bluesky-social/indigo v0.0.0-20240207024728-f687b8527cf1
+	github.com/bluesky-social/indigo v0.0.0-20240208004502-c72ce2340db3
 	github.com/gorilla/websocket v1.5.1
 	github.com/ikawaha/kagome-dict v1.0.9
 	github.com/ikawaha/kagome-dict-ipa-neologd v0.3.2
