@@ -49,6 +49,8 @@ var (
 	reJapanese      = regexp.MustCompile(`[０-９Ａ-Ｚａ-ｚぁ-ゖァ-ヾ一-鶴]`)
 	reHiragKataOnly = regexp.MustCompile(`^([ぁ-ゖー]+|[ァ-ヾー]+)$`)
 
+	tagRe = regexp.MustCompile(`\B#\S+`)
+
 	debug = false
 
 	kagomeDic = ipaneologd.Dict()
@@ -102,6 +104,25 @@ func isTanka(s string) bool {
 	return haiku.MatchWithOpt(s, []int{5, 7, 5, 7, 7}, &haiku.Opt{Dict: kagomeDic, UserDict: userDic, Debug: debug})
 }
 
+type entry struct {
+	start int64
+	end   int64
+	text  string
+}
+
+func extractTagsBytes(text string) []entry {
+	var result []entry
+	matches := tagRe.FindAllStringSubmatchIndex(text, -1)
+	for _, m := range matches {
+		result = append(result, entry{
+			text:  strings.TrimPrefix(text[m[0]:m[1]], "#"),
+			start: int64(len(text[0:m[0]])),
+			end:   int64(len(text[0:m[1]]))},
+		)
+	}
+	return result
+}
+
 func (bot *Bot) post(collection string, did string, rkey string, text string) error {
 	if strings.TrimSpace(text) == "" {
 		return nil
@@ -128,6 +149,22 @@ func (bot *Bot) post(collection string, did string, rkey string, text string) er
 			},
 		},
 		Langs: []string{"ja"},
+	}
+
+	for _, entry := range extractTagsBytes(text) {
+		post.Facets = append(post.Facets, &bsky.RichtextFacet{
+			Features: []*bsky.RichtextFacet_Features_Elem{
+				{
+					RichtextFacet_Tag: &bsky.RichtextFacet_Tag{
+						Tag: entry.text,
+					},
+				},
+			},
+			Index: &bsky.RichtextFacet_ByteSlice{
+				ByteStart: entry.start,
+				ByteEnd:   entry.end,
+			},
+		})
 	}
 
 	var lastErr error
