@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	_ "net/http/pprof"
 	"net/url"
@@ -462,7 +463,7 @@ func run() error {
 			return fmt.Errorf("error frame: %s: %s", errf.Error, errf.Message)
 		},
 	}
-	err = events.HandleRepoStream(ctx, con, sequential.NewScheduler("stream", rsc.EventHandler))
+	err = events.HandleRepoStream(ctx, con, sequential.NewScheduler("stream", rsc.EventHandler), slog.Default())
 	if err != nil {
 		log.Println(err)
 	}
