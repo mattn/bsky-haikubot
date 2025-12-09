@@ -1,4 +1,6 @@
 secret.yaml
 k8s
 *.sh
+*.cmd
 bsky-haikubot
+bsky-haikubot.exe
