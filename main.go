@@ -435,18 +435,18 @@ func run() error {
 							return nil
 						}
 					}
-					if strings.Contains(post.Text, "#n575") || !reJapanese.MatchString(post.Text) {
-						return nil
-					}
-					if reHiragKataOnly.MatchString(post.Text) {
-						return nil
-					}
 					if blocklisted(evt.Repo) {
 						log.Println("BLOCKED ", evt.Repo)
 						return nil
 					}
 					parts := strings.Split(op.Path, "/")
 					if len(parts) < 2 {
+						return nil
+					}
+					if strings.Contains(post.Text, "#n575") || !reJapanese.MatchString(post.Text) {
+						return nil
+					}
+					if reHiragKataOnly.MatchString(post.Text) {
 						return nil
 					}
 					enc.Encode(post)
