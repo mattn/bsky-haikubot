@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	_ "net/http/pprof"
 	"net/url"
@@ -434,18 +435,18 @@ func run() error {
 							return nil
 						}
 					}
-					if strings.Contains(post.Text, "#n575") || !reJapanese.MatchString(post.Text) {
-						return nil
-					}
-					if reHiragKataOnly.MatchString(post.Text) {
-						return nil
-					}
 					if blocklisted(evt.Repo) {
 						log.Println("BLOCKED ", evt.Repo)
 						return nil
 					}
 					parts := strings.Split(op.Path, "/")
 					if len(parts) < 2 {
+						return nil
+					}
+					if strings.Contains(post.Text, "#n575") || !reJapanese.MatchString(post.Text) {
+						return nil
+					}
+					if reHiragKataOnly.MatchString(post.Text) {
 						return nil
 					}
 					enc.Encode(post)
@@ -462,7 +463,7 @@ func run() error {
 			return fmt.Errorf("error frame: %s: %s", errf.Error, errf.Message)
 		},
 	}
-	err = events.HandleRepoStream(ctx, con, sequential.NewScheduler("stream", rsc.EventHandler))
+	err = events.HandleRepoStream(ctx, con, sequential.NewScheduler("stream", rsc.EventHandler), slog.Default())
 	if err != nil {
 		log.Println(err)
 	}
