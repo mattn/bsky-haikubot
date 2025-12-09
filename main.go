@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	_ "net/http/pprof"
@@ -181,7 +180,7 @@ func (bot *Bot) post(collection string, did string, rkey string, text string) er
 			fmt.Println(resp.Uri)
 			return nil
 		}
-		log.Printf("failed to create post: %v", err)
+		slog.Error("failed to create post", slog.Any("error", err))
 		lastErr = err
 		time.Sleep(time.Second)
 	}
@@ -209,14 +208,14 @@ func (bot *Bot) analyze(ev Event) error {
 	}
 	content := normalize(ev.text)
 	if isHaiku(content) {
-		log.Println("MATCHED HAIKU!", content)
+		slog.Info("MATCHED HAIKU!", slog.String("content", content))
 		err := bot.post(ev.schema, ev.did, ev.rkey, content+" #n575 #haiku")
 		if err != nil {
 			return err
 		}
 	}
 	if isTanka(content) {
-		log.Println("MATCHED TANKA!", content)
+		slog.Info("MATCHED TANKA!", slog.String("content", content))
 		err := bot.post(ev.schema, ev.did, ev.rkey, content+" #n57577 #tanka")
 		if err != nil {
 			return err
@@ -255,13 +254,13 @@ func (bot *Bot) updateFollowers() {
 	defer func() {
 		err := recover()
 		if err != nil {
-			log.Printf("recover: %v", err)
+			slog.Error("recover", slog.Any("error", err))
 		}
 	}()
 
 	xrpcc, err := bot.makeXRPCC()
 	if err != nil {
-		log.Printf("cannot create client: %v", err)
+		slog.Error("cannot create client", slog.Any("error", err))
 		return
 	}
 
@@ -270,7 +269,7 @@ func (bot *Bot) updateFollowers() {
 	for {
 		fws, err := bsky.GraphGetFollowers(context.TODO(), xrpcc, xrpcc.Auth.Handle, cursor, 100)
 		if err != nil {
-			log.Printf("getting record: %v", err)
+			slog.Error("failed to get record", slog.Any("error", err))
 			return
 		}
 
@@ -311,7 +310,7 @@ func getenv(name, def string) string {
 func (bot *Bot) wssUrl() string {
 	u, err := url.Parse(bot.Bgs)
 	if err != nil {
-		log.Fatal("invalid host", bot.Host)
+		slog.Error("invalid host", slog.String("host", bot.Host))
 	}
 	return "wss://" + u.Host + "/xrpc/com.atproto.sync.subscribeRepos"
 }
@@ -319,7 +318,7 @@ func (bot *Bot) wssUrl() string {
 func heartbeatPush(url string) {
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Println(err.Error())
+		slog.Error("failed to post heartbeat", slog.Any("error", err))
 		return
 	}
 	defer resp.Body.Close()
@@ -333,7 +332,7 @@ func run() error {
 	bot.Password = os.Getenv("HAIKUBOT_PASSWORD")
 
 	if bot.Password == "" {
-		log.Fatal("HAIKUBOT_PASSWORD is required")
+		panic("HAIKUBOT_PASSWORD is required")
 	}
 
 	go bot.updateFollowers()
@@ -365,7 +364,7 @@ func run() error {
 					break events_loop
 				}
 				if err := bot.analyze(ev); err != nil {
-					log.Println(err)
+					slog.Error("failed to analyze", slog.Any("error", err))
 				}
 				retry = 0
 			case <-hbtimer.C:
@@ -376,9 +375,9 @@ func run() error {
 				go bot.updateFollowers()
 			case <-time.After(10 * time.Second):
 				retry++
-				log.Println("Health check", retry)
+				slog.Info("health check", slog.Int("retry", retry))
 				if retry > 60 {
-					log.Println("timeout")
+					slog.Info("health check timeout", slog.Int("retry", retry))
 					con.Close()
 					break events_loop
 				}
@@ -393,7 +392,7 @@ func run() error {
 	rsc := &events.RepoStreamCallbacks{
 		RepoCommit: func(evt *comatproto.SyncSubscribeRepos_Commit) error {
 			if evt.TooBig {
-				log.Printf("skipping too big events for now: %d", evt.Seq)
+				slog.Info("skipping too big events for now", slog.Int64("seq", evt.Seq))
 				return nil
 			}
 			r, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))
@@ -408,7 +407,7 @@ func run() error {
 					rc, rec, err := r.GetRecord(ctx, op.Path)
 					if err != nil {
 						e := fmt.Errorf("getting record %s (%s) within seq %d for %s: %w", op.Path, *op.Cid, evt.Seq, evt.Repo, err)
-						log.Print(e)
+						slog.Error(e.Error(), slog.Any("error", err))
 						continue
 					}
 
@@ -436,7 +435,7 @@ func run() error {
 						}
 					}
 					if blocklisted(evt.Repo) {
-						log.Println("BLOCKED ", evt.Repo)
+						slog.Debug("BLOCKED", slog.String("repo", evt.Repo))
 						return nil
 					}
 					parts := strings.Split(op.Path, "/")
@@ -465,7 +464,7 @@ func run() error {
 	}
 	err = events.HandleRepoStream(ctx, con, sequential.NewScheduler("stream", rsc.EventHandler), slog.Default())
 	if err != nil {
-		log.Println(err)
+		slog.Error("failed to stream", slog.Any("error", err))
 	}
 	close(q)
 	wg.Wait()
@@ -506,9 +505,9 @@ func main() {
 	go http.ListenAndServe("0.0.0.0:6060", nil)
 
 	for {
-		log.Println("start")
+		slog.Info("start")
 		if err := run(); err != nil {
-			log.Println(err)
+			slog.Error("failed to run", slog.Any("error", err))
 		}
 	}
 }
