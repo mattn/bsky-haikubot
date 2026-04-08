@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	//"github.com/ikawaha/kagome-dict/uni"
 	//"github.com/ikawaha/kagome-dict/ipa"
@@ -206,6 +207,10 @@ func (bot *Bot) analyze(ev Event) error {
 		return nil
 	}
 	content := normalize(ev.text)
+	clen := utf8.RuneCountInString(content)
+	if clen < 10 || clen > 100 {
+		return nil
+	}
 	if isHaiku(content) {
 		slog.Info("MATCHED HAIKU!", slog.String("content", content))
 		err := bot.post(ev.schema, ev.did, ev.rkey, content+" #n575 #haiku")
