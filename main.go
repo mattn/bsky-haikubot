@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -356,6 +355,8 @@ func run() error {
 	go func() {
 		defer wg.Done()
 		retry := 0
+		idleTimer := time.NewTimer(10 * time.Second)
+		defer idleTimer.Stop()
 	events_loop:
 		for {
 			select {
@@ -367,13 +368,20 @@ func run() error {
 					slog.Error("failed to analyze", slog.Any("error", err))
 				}
 				retry = 0
+				if !idleTimer.Stop() {
+					select {
+					case <-idleTimer.C:
+					default:
+					}
+				}
+				idleTimer.Reset(10 * time.Second)
 			case <-hbtimer.C:
 				if url := os.Getenv("HEARTBEAT_URL"); url != "" {
 					go heartbeatPush(url)
 				}
 			case <-uftimer.C:
 				go bot.updateFollowers()
-			case <-time.After(10 * time.Second):
+			case <-idleTimer.C:
 				retry++
 				slog.Info("health check", slog.Int("retry", retry))
 				if retry > 60 {
@@ -381,7 +389,7 @@ func run() error {
 					con.Close()
 					break events_loop
 				}
-				runtime.GC()
+				idleTimer.Reset(10 * time.Second)
 			}
 		}
 	}()
