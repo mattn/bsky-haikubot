@@ -7,7 +7,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/ikawaha/kagome-dict v1.1.7
 	github.com/ikawaha/kagome-dict-ipa-neologd v0.3.2
-	github.com/mattn/go-haiku v0.0.45
+	github.com/mattn/go-haiku v0.0.47
 )
 
 require (
