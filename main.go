@@ -26,11 +26,7 @@ import (
 
 	comatproto "github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
-	"github.com/bluesky-social/indigo/events"
-	"github.com/bluesky-social/indigo/events/schedulers/sequential"
 	lexutil "github.com/bluesky-social/indigo/lex/util"
-	"github.com/bluesky-social/indigo/repo"
-	"github.com/bluesky-social/indigo/repomgr"
 	"github.com/bluesky-social/indigo/util/cliutil"
 	"github.com/bluesky-social/indigo/xrpc"
 
@@ -60,7 +56,7 @@ var (
 
 	userDic *dict.UserDict
 
-	followers []string
+	followers map[string]struct{}
 
 	mu sync.Mutex
 )
@@ -229,10 +225,10 @@ func (bot *Bot) analyze(ev Event) error {
 }
 
 type Bot struct {
-	Bgs      string
-	Host     string
-	Handle   string
-	Password string
+	Jetstream string
+	Host      string
+	Handle    string
+	Password  string
 }
 
 func (bot *Bot) makeXRPCC() (*xrpc.Client, error) {
@@ -269,7 +265,7 @@ func (bot *Bot) updateFollowers() {
 	}
 
 	var cursor string
-	var ffs []string
+	ffs := map[string]struct{}{}
 	for {
 		fws, err := bsky.GraphGetFollowers(context.TODO(), xrpcc, xrpcc.Auth.Handle, cursor, 100)
 		if err != nil {
@@ -278,7 +274,7 @@ func (bot *Bot) updateFollowers() {
 		}
 
 		for _, f := range fws.Followers {
-			ffs = append(ffs, f.Did)
+			ffs[f.Did] = struct{}{}
 		}
 		if fws.Cursor == nil {
 			break
@@ -295,12 +291,8 @@ func (bot *Bot) hasRelation(did string) bool {
 	mu.Lock()
 	defer mu.Unlock()
 
-	for _, f := range followers {
-		if f == did {
-			return true
-		}
-	}
-	return false
+	_, ok := followers[did]
+	return ok
 }
 
 func getenv(name, def string) string {
@@ -311,12 +303,21 @@ func getenv(name, def string) string {
 	return s
 }
 
-func (bot *Bot) wssUrl() string {
-	u, err := url.Parse(bot.Bgs)
+func (bot *Bot) jetstreamURL(cursor int64) string {
+	u, err := url.Parse(bot.Jetstream)
 	if err != nil {
-		slog.Error("invalid host", slog.String("host", bot.Host))
+		slog.Error("invalid jetstream url", slog.String("url", bot.Jetstream))
+		return bot.Jetstream
 	}
-	return "wss://" + u.Host + "/xrpc/com.atproto.sync.subscribeRepos"
+	q := u.Query()
+	q.Set("wantedCollections", "app.bsky.feed.post")
+	if cursor > 0 {
+		q.Set("cursor", fmt.Sprint(cursor))
+	} else {
+		q.Del("cursor")
+	}
+	u.RawQuery = q.Encode()
+	return u.String()
 }
 
 func heartbeatPush(url string) {
@@ -328,9 +329,41 @@ func heartbeatPush(url string) {
 	defer resp.Body.Close()
 }
 
-func run() error {
+// jetstreamEvent is a message of Jetstream. only the fields used by the bot
+// are decoded. see https://github.com/bluesky-social/jetstream
+type jetstreamEvent struct {
+	Did    string `json:"did"`
+	TimeUS int64  `json:"time_us"`
+	Kind   string `json:"kind"`
+	Commit *struct {
+		Operation  string `json:"operation"`
+		Collection string `json:"collection"`
+		Rkey       string `json:"rkey"`
+		Record     struct {
+			Text  string   `json:"text"`
+			Langs []string `json:"langs"`
+		} `json:"record"`
+	} `json:"commit"`
+}
+
+func hasJa(langs []string) bool {
+	if len(langs) == 0 {
+		return true
+	}
+	for _, lang := range langs {
+		if lang == "ja" {
+			return true
+		}
+	}
+	return false
+}
+
+// run reads posts from Jetstream until the connection fails. cursor holds
+// time_us of the last message received, so that the next run resumes from
+// there.
+func run(cursor *int64) error {
 	var bot Bot
-	bot.Bgs = getenv("HAIKUBOT_BGS", "https://bsky.network")
+	bot.Jetstream = getenv("HAIKUBOT_JETSTREAM", "wss://jetstream2.us-east.bsky.network/subscribe")
 	bot.Host = getenv("HAIKUBOT_HOST", "https://bsky.social")
 	bot.Handle = getenv("HAIKUBOT_HANDLE", "haiku.bsky.social")
 	bot.Password = os.Getenv("HAIKUBOT_PASSWORD")
@@ -341,7 +374,11 @@ func run() error {
 
 	go bot.updateFollowers()
 
-	con, _, err := websocket.DefaultDialer.Dial(bot.wssUrl(), http.Header{})
+	from := *cursor
+	if from > 0 {
+		from++
+	}
+	con, _, err := websocket.DefaultDialer.Dial(bot.jetstreamURL(from), http.Header{})
 	if err != nil {
 		return fmt.Errorf("dial failure: %w", err)
 	}
@@ -359,133 +396,68 @@ func run() error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		retry := 0
-		idleTimer := time.NewTimer(10 * time.Second)
-		defer idleTimer.Stop()
-	events_loop:
 		for {
 			select {
 			case ev, ok := <-q:
 				if !ok {
-					break events_loop
+					return
 				}
 				if err := bot.analyze(ev); err != nil {
 					slog.Error("failed to analyze", slog.Any("error", err))
 				}
-				retry = 0
-				if !idleTimer.Stop() {
-					select {
-					case <-idleTimer.C:
-					default:
-					}
-				}
-				idleTimer.Reset(10 * time.Second)
 			case <-hbtimer.C:
 				if url := os.Getenv("HEARTBEAT_URL"); url != "" {
 					go heartbeatPush(url)
 				}
 			case <-uftimer.C:
 				go bot.updateFollowers()
-			case <-idleTimer.C:
-				retry++
-				slog.Info("health check", slog.Int("retry", retry))
-				if retry > 60 {
-					slog.Info("health check timeout", slog.Int("retry", retry))
-					con.Close()
-					break events_loop
-				}
-				idleTimer.Reset(10 * time.Second)
 			}
 		}
 	}()
 
 	enc := json.NewEncoder(os.Stdout)
 
-	ctx := context.Background()
-	rsc := &events.RepoStreamCallbacks{
-		RepoCommit: func(evt *comatproto.SyncSubscribeRepos_Commit) error {
-			if evt.TooBig {
-				slog.Info("skipping too big events for now", slog.Int64("seq", evt.Seq))
-				return nil
-			}
-			r, err := repo.ReadRepoFromCar(ctx, bytes.NewReader(evt.Blocks))
-			if err != nil {
-				return fmt.Errorf("reading repo from car (seq: %d, len: %d): %w", evt.Seq, len(evt.Blocks), err)
-			}
+	for {
+		// posts of the whole network keep coming, so a quiet connection is
+		// a dead one.
+		con.SetReadDeadline(time.Now().Add(time.Minute))
+		_, b, err := con.ReadMessage()
+		if err != nil {
+			err = fmt.Errorf("failed to read: %w", err)
+			close(q)
+			wg.Wait()
+			return err
+		}
+		var ev jetstreamEvent
+		if err := json.Unmarshal(b, &ev); err != nil {
+			slog.Error("failed to decode", slog.Any("error", err))
+			continue
+		}
+		if ev.TimeUS > *cursor {
+			*cursor = ev.TimeUS
+		}
+		if ev.Kind != "commit" || ev.Commit == nil || ev.Commit.Operation != "create" || ev.Commit.Collection != "app.bsky.feed.post" {
+			continue
+		}
+		if blocklisted(ev.Did) || !bot.hasRelation(ev.Did) {
+			continue
+		}
+		post := &ev.Commit.Record
+		if !hasJa(post.Langs) {
+			continue
+		}
+		if strings.Contains(post.Text, "#n575") || !reJapanese.MatchString(post.Text) {
+			continue
+		}
+		if reHiragKataOnly.MatchString(post.Text) {
+			continue
+		}
+		if debug {
+			enc.Encode(post)
+		}
 
-			for _, op := range evt.Ops {
-				ek := repomgr.EventKind(op.Action)
-				switch ek {
-				case repomgr.EvtKindCreateRecord, repomgr.EvtKindUpdateRecord:
-					if !strings.HasPrefix(op.Path, "app.bsky.feed.post/") {
-						continue
-					}
-					rc, rec, err := r.GetRecord(ctx, op.Path)
-					if err != nil {
-						e := fmt.Errorf("getting record %s (%s) within seq %d for %s: %w", op.Path, *op.Cid, evt.Seq, evt.Repo, err)
-						slog.Error(e.Error(), slog.Any("error", err))
-						continue
-					}
-
-					if lexutil.LexLink(rc) != *op.Cid {
-						return fmt.Errorf("mismatch in record and op cid: %s != %s", rc, *op.Cid)
-					}
-
-					if ek != "create" {
-						return nil
-					}
-					post, ok := rec.(*bsky.FeedPost)
-					if !ok {
-						return nil
-					}
-					if len(post.Langs) > 0 {
-						hasJa := false
-						for _, lang := range post.Langs {
-							if lang == "ja" {
-								hasJa = true
-								break
-							}
-						}
-						if !hasJa {
-							return nil
-						}
-					}
-					if blocklisted(evt.Repo) {
-						slog.Debug("BLOCKED", slog.String("repo", evt.Repo))
-						return nil
-					}
-					parts := strings.Split(op.Path, "/")
-					if len(parts) < 2 {
-						return nil
-					}
-					if strings.Contains(post.Text, "#n575") || !reJapanese.MatchString(post.Text) {
-						return nil
-					}
-					if reHiragKataOnly.MatchString(post.Text) {
-						return nil
-					}
-					enc.Encode(post)
-
-					q <- Event{schema: parts[0], did: evt.Repo, rkey: parts[1], text: post.Text}
-				}
-			}
-			return nil
-		},
-		RepoInfo: func(info *comatproto.SyncSubscribeRepos_Info) error {
-			return nil
-		},
-		Error: func(errf *events.ErrorFrame) error {
-			return fmt.Errorf("error frame: %s: %s", errf.Error, errf.Message)
-		},
+		q <- Event{schema: ev.Commit.Collection, did: ev.Did, rkey: ev.Commit.Rkey, text: post.Text}
 	}
-	err = events.HandleRepoStream(ctx, con, sequential.NewScheduler("stream", rsc.EventHandler), slog.Default())
-	if err != nil {
-		slog.Error("failed to stream", slog.Any("error", err))
-	}
-	close(q)
-	wg.Wait()
-
-	return nil
 }
 
 func check(s string) int {
@@ -525,10 +497,12 @@ func main() {
 
 	go http.ListenAndServe("0.0.0.0:6060", nil)
 
+	var cursor int64
 	for {
 		slog.Info("start")
-		if err := run(); err != nil {
+		if err := run(&cursor); err != nil {
 			slog.Error("failed to run", slog.Any("error", err))
 		}
+		time.Sleep(time.Second)
 	}
 }
