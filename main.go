@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	rdebug "runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -20,7 +21,6 @@ import (
 
 	//"github.com/ikawaha/kagome-dict/uni"
 	//"github.com/ikawaha/kagome-dict/ipa"
-	"github.com/ikawaha/kagome-dict-ipa-neologd"
 	"github.com/ikawaha/kagome-dict/dict"
 	"github.com/mattn/go-haiku"
 
@@ -53,7 +53,7 @@ var (
 
 	debug = false
 
-	kagomeDic = ipaneologd.Dict()
+	kagomeDic *dict.Dict
 
 	//go:embed userdic.txt
 	dicdata []byte
@@ -513,6 +513,11 @@ func main() {
 		fmt.Println(version)
 		os.Exit(0)
 	}
+
+	kagomeDic = systemDict()
+	// the dictionary allocates far more than it keeps while loading. give
+	// the rest back to the OS instead of letting it sit in the heap.
+	rdebug.FreeOSMemory()
 
 	if tt {
 		os.Exit(check(strings.Join(flag.Args(), " ")))

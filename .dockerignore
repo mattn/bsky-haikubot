@@ -2,3 +2,4 @@ secret.yaml
 k8s
 test.sh
 bsky-haikubot
+neologd-slim.dict

@@ -7,7 +7,8 @@ RUN apk --update add --no-cache upx gcc musl-dev || \
     go version && \
     go mod download
 COPY --link . .
-RUN CGO_ENABLED=1 go install -buildvcs=false -trimpath -ldflags '-w -s -extldflags "-static"'
+RUN go run ./cmd/slimdict -out neologd-slim.dict
+RUN CGO_ENABLED=1 go install -tags slimdict -buildvcs=false -trimpath -ldflags '-w -s -extldflags "-static"'
 RUN [ -e /usr/bin/upx ] && upx /go/bin/bsky-haikubot || echo
 FROM scratch
 COPY --link --from=build-dev /go/bin/bsky-haikubot /go/bin/bsky-haikubot

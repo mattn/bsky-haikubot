@@ -4,3 +4,4 @@ k8s
 *.cmd
 bsky-haikubot
 bsky-haikubot.exe
+neologd-slim.dict
